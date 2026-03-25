@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Fim das Dívidas"
+version = "1.0.0"
+id = "artifacts/fim-das-dividas"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25251
+
+[services.development]
+run = "pnpm --filter @workspace/fim-das-dividas run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/fim-das-dividas", "run", "build" ]
+publicDir = "artifacts/fim-das-dividas/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25251"
+BASE_PATH = "/"

@@ -21,7 +21,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ```text
 artifacts-monorepo/
 ├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
+│   ├── api-server/         # Express API server
+│   └── fim-das-dividas/    # Fim das Dívidas — Family Finance Manager (React + Vite + Firebase)
 ├── lib/                    # Shared libraries
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
@@ -34,6 +35,34 @@ artifacts-monorepo/
 ├── tsconfig.json           # Root TS project references
 └── package.json            # Root package with hoisted devDeps
 ```
+
+## Fim das Dívidas (`artifacts/fim-das-dividas`)
+
+Family Debt Management app. Frontend-only (no backend) — uses Firebase Firestore for real-time data sync.
+
+### Features
+- Debt registration: name, total value, installment value, due day, total/paid installments, start date
+- Projection intelligence: auto-calculates payoff date per debt
+- Payoff Timeline: visual timeline ordered by payoff date
+- Dashboard: total debt, current month cost, last payoff date, active count
+- Month payment status: Paid/Pending badge per debt with toggle
+- Real-time sync: Firebase Firestore (accessible from multiple devices simultaneously)
+- Dark mode UI, mobile-responsive (iPhone-optimized)
+
+### Key Files
+- `src/lib/firebase.ts` — Firebase init + Firestore export
+- `src/hooks/useDebts.ts` — Firestore CRUD + real-time listener
+- `src/lib/debtUtils.ts` — Calculation helpers (payoff date, totals, progress)
+- `src/types/debt.ts` — TypeScript interfaces
+- `src/pages/Home.tsx` — Main app page with tabs
+- `src/components/Dashboard.tsx` — Summary cards
+- `src/components/DebtCard.tsx` — Individual debt card
+- `src/components/Timeline.tsx` — Payoff timeline
+- `src/components/AddDebtModal.tsx` — Add debt form
+
+### Firebase Config
+- Project: `controledividas-13747`
+- Collection: `debts`
 
 ## TypeScript & Composite Projects
 
