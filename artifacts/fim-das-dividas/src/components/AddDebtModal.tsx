@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { X, Plus } from "lucide-react";
-import { DebtFormData } from "../types/debt";
+import { Debt, DebtFormData } from "../types/debt";
 
 interface AddDebtModalProps {
   onClose: () => void;
   onAdd: (data: DebtFormData) => Promise<void>;
+  onEdit?: (id: string, updates: Partial<Omit<Debt, "id">>) => Promise<void>;
+  debtToEdit?: Debt | null;
 }
 
 const defaultForm: DebtFormData = {
@@ -17,8 +19,20 @@ const defaultForm: DebtFormData = {
   startDate: "",
 };
 
-export function AddDebtModal({ onClose, onAdd }: AddDebtModalProps) {
-  const [form, setForm] = useState<DebtFormData>(defaultForm);
+export function AddDebtModal({ onClose, onAdd, onEdit, debtToEdit }: AddDebtModalProps) {
+  const [form, setForm] = useState<DebtFormData>(
+    debtToEdit
+      ? {
+          name: debtToEdit.name,
+          totalValue: String(debtToEdit.totalValue),
+          installmentValue: String(debtToEdit.installmentValue),
+          dueDay: String(debtToEdit.dueDay),
+          totalInstallments: String(debtToEdit.totalInstallments),
+          paidInstallments: String(debtToEdit.paidInstallments),
+          startDate: debtToEdit.startDate,
+        }
+      : defaultForm
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -46,11 +60,23 @@ export function AddDebtModal({ onClose, onAdd }: AddDebtModalProps) {
 
     setLoading(true);
     try {
-      await onAdd({
-        ...form,
-        totalValue: String(totalVal),
-        paidInstallments: String(paid),
-      });
+      if (debtToEdit && onEdit) {
+        await onEdit(debtToEdit.id, {
+          name: form.name.trim(),
+          totalValue: totalVal,
+          installmentValue: parseFloat(form.installmentValue),
+          dueDay: parseInt(form.dueDay),
+          totalInstallments: total,
+          paidInstallments: paid,
+          startDate: form.startDate,
+        });
+      } else {
+        await onAdd({
+          ...form,
+          totalValue: String(totalVal),
+          paidInstallments: String(paid),
+        });
+      }
       onClose();
     } catch {
       setError("Erro ao salvar. Tente novamente.");
@@ -63,7 +89,7 @@ export function AddDebtModal({ onClose, onAdd }: AddDebtModalProps) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="w-full max-w-md bg-gray-900 border border-gray-700/60 rounded-2xl shadow-2xl">
         <div className="flex items-center justify-between p-5 border-b border-gray-800">
-          <h2 className="text-lg font-bold text-white">Nova Dívida</h2>
+          <h2 className="text-lg font-bold text-white">{debtToEdit ? "Editar Dívida" : "Nova Dívida"}</h2>
           <button
             onClick={onClose}
             className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
@@ -190,7 +216,7 @@ export function AddDebtModal({ onClose, onAdd }: AddDebtModalProps) {
             className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors text-sm"
           >
             <Plus size={16} />
-            {loading ? "Salvando..." : "Adicionar Dívida"}
+            {loading ? "Salvando..." : (debtToEdit ? "Salvar Alterações" : "Adicionar Dívida")}
           </button>
         </form>
       </div>

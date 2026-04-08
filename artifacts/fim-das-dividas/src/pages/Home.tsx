@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Loader2, LayoutDashboard, Clock, List, TrendingDown } from "lucide-react";
+import { Plus, Loader2, LayoutDashboard, Clock, List, TrendingDown, Pencil } from "lucide-react";
 import { useDebts } from "../hooks/useDebts";
 import { Dashboard } from "../components/Dashboard";
 import { DebtCard } from "../components/DebtCard";
@@ -11,13 +11,46 @@ import { getCurrentMonthKey } from "../lib/debtUtils";
 type Tab = "dashboard" | "debts" | "timeline";
 
 export default function Home() {
-  const { debts, loading, addDebt, deleteDebt, toggleMonthPaid } = useDebts();
+  const { debts, loading, addDebt, updateDebt, deleteDebt, toggleMonthPaid } = useDebts();
   const [showModal, setShowModal] = useState(false);
+  const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
 
   const currentMonthKey = getCurrentMonthKey();
   const now = new Date();
-  const monthName = now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+
+  // Função para formatar a data com a primeira letra maiúscula (ex: "Maio de 2024")
+  const formatMonthYear = (date: Date) => {
+    const str = date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
+  const monthName = formatMonthYear(now);
+
+  const getSubTitle = () => {
+    if (loading || !debts || debts.length === 0) return monthName;
+    
+    const activeDebts = debts.filter(d => d.totalInstallments - d.paidInstallments > 0);
+    if (activeDebts.length === 0) return "Todas as dívidas quitadas! 🎉";
+
+    const maxTime = Math.max(...activeDebts.map(d => {
+      const debtAny = d as any;
+      if (debtAny.payoffDate) return new Date(debtAny.payoffDate).getTime();
+      
+      // Fallback: estimativa com base nas parcelas restantes caso a propriedade falte
+      const remaining = d.totalInstallments - d.paidInstallments;
+      const estimatedDate = new Date();
+      estimatedDate.setMonth(estimatedDate.getMonth() + remaining - 1);
+      return estimatedDate.getTime();
+    }));
+
+    if (isNaN(maxTime) || maxTime === -Infinity) return monthName;
+
+    const maxDate = new Date(maxTime);
+    return `Última quitação: ${formatMonthYear(maxDate)}`;
+  };
+
+  const subTitle = getSubTitle();
 
   const handleToggleMonthPaid = async (debt: Debt, monthKey: string) => {
     await toggleMonthPaid(debt, monthKey);
@@ -37,7 +70,7 @@ export default function Home() {
             <TrendingDown className="text-blue-400" size={22} />
             <h1 className="text-xl font-bold text-white">Fim das Dívidas</h1>
           </div>
-          <p className="text-gray-400 text-sm capitalize">{monthName}</p>
+          <p className="text-gray-400 text-sm">{subTitle}</p>
         </header>
 
         {loading ? (
@@ -85,12 +118,22 @@ export default function Home() {
                       {debts
                         .filter((d) => d.totalInstallments - d.paidInstallments > 0)
                         .map((debt) => (
-                          <DebtCard
-                            key={debt.id}
-                            debt={debt}
-                            onDelete={deleteDebt}
-                            onToggleMonthPaid={handleToggleMonthPaid}
-                          />
+                          <div key={debt.id} className="relative group">
+                            <div className="absolute right-12 top-4 z-10">
+                              <button
+                                onClick={() => setEditingDebt(debt)}
+                                className="p-1.5 bg-gray-800/80 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-blue-400 border border-gray-700/50 transition-all shadow-sm"
+                                title="Editar dívida"
+                              >
+                                <Pencil size={16} />
+                              </button>
+                            </div>
+                            <DebtCard
+                              debt={debt}
+                              onDelete={deleteDebt}
+                              onToggleMonthPaid={handleToggleMonthPaid}
+                            />
+                          </div>
                         ))}
                     </div>
                   )}
@@ -110,12 +153,22 @@ export default function Home() {
                   </div>
                 ) : (
                   debts.map((debt) => (
-                    <DebtCard
-                      key={debt.id}
-                      debt={debt}
-                      onDelete={deleteDebt}
-                      onToggleMonthPaid={handleToggleMonthPaid}
-                    />
+                    <div key={debt.id} className="relative group">
+                      <div className="absolute right-12 top-4 z-10">
+                        <button
+                          onClick={() => setEditingDebt(debt)}
+                          className="p-1.5 bg-gray-800/80 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-blue-400 border border-gray-700/50 transition-all shadow-sm"
+                          title="Editar dívida"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      </div>
+                      <DebtCard
+                        debt={debt}
+                        onDelete={deleteDebt}
+                        onToggleMonthPaid={handleToggleMonthPaid}
+                      />
+                    </div>
                   ))
                 )}
               </div>
@@ -151,6 +204,15 @@ export default function Home() {
         <AddDebtModal
           onClose={() => setShowModal(false)}
           onAdd={addDebt}
+        />
+      )}
+
+      {editingDebt && (
+        <AddDebtModal
+          onClose={() => setEditingDebt(null)}
+          onAdd={addDebt}
+          onEdit={updateDebt}
+          debtToEdit={editingDebt}
         />
       )}
     </div>
